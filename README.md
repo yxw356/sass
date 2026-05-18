@@ -61,7 +61,7 @@ cp .env.example .env
 uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 ```
 
-服务地址：`http://127.0.0.1:8080`  
+交互页面：`http://127.0.0.1:8080`  
 API 文档：`http://127.0.0.1:8080/docs`
 
 > 知识库 API 使用 **8080** 端口，避免与 vLLM 的 **8000** 端口冲突。
@@ -164,7 +164,10 @@ EMBEDDING_LOCAL_FILES_ONLY=true
 A: 需要加载 Embedding 模型（`BAAI/bge-small-zh-v1.5`）。建议用上面的脚本预下载到 `models/`，避免运行时访问 Hugging Face。
 
 **Q: `/chat` 报错连接 LLM 失败？**  
-A: 确认 vLLM 已在 `http://127.0.0.1:8000` 运行，且 `VLLM_MODEL` 与 vLLM 实际加载的模型名一致。
+A: 确认 vLLM 已在 `http://127.0.0.1:8000` 运行，且 `VLLM_MODEL` 与 vLLM 实际加载的模型名一致（可用 `curl -H "Authorization: Bearer $VLLM_API_KEY" http://127.0.0.1:8000/v1/models` 查看 `id`）。
+
+**Q: 报错 Unknown model 'Qwen...' 一长串 OpenAI 模型列表？**  
+A: 这是 LlamaIndex 误把 vLLM 模型当成 OpenAI 官方名校验。项目已用 `VLLMOpenAI` 绕过；若仍出现，重启 uvicorn，并确认 `.env` 里 `VLLM_MODEL` 与 vLLM 返回的 `id` 完全一致。
 
 **Q: 如何清空知识库？**  
 A: 停止服务后删除 `chroma_db/` 目录和 `data/uploads/` 中的文件，重启即可。

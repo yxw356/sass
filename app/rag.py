@@ -8,6 +8,8 @@ import chromadb
 from llama_index.core import Settings as LlamaSettings
 from llama_index.core import SimpleDirectoryReader, StorageContext, VectorStoreIndex
 from llama_index.core.node_parser import SentenceSplitter
+from llama_index.core.base.llms.types import MessageRole
+from llama_index.core.llms import LLMMetadata
 from llama_index.core.schema import NodeWithScore
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.openai import OpenAI
@@ -21,6 +23,25 @@ ALLOWED_EXTENSIONS = {".txt", ".md", ".pdf"}
 logger = logging.getLogger(__name__)
 _index: VectorStoreIndex | None = None
 _embed_model: HuggingFaceEmbedding | None = None
+
+
+class VLLMOpenAI(OpenAI):
+    """OpenAI-compatible client for vLLM; skips OpenAI official model-name validation."""
+
+    @property
+    def metadata(self) -> LLMMetadata:
+        return LLMMetadata(
+            context_window=settings.vllm_context_window,
+            num_output=self.max_tokens or -1,
+            is_chat_model=True,
+            is_function_calling_model=True,
+            model_name=self.model,
+            system_role=MessageRole.SYSTEM,
+        )
+
+    @property
+    def _tokenizer(self):
+        return None
 
 
 def _embedding_load_hint() -> str:
@@ -52,11 +73,10 @@ def _create_embed_model() -> HuggingFaceEmbedding:
 
 
 def _configure_llama() -> None:
-    LlamaSettings.llm = OpenAI(
+    LlamaSettings.llm = VLLMOpenAI(
         model=settings.vllm_model,
         api_key=settings.vllm_api_key,
         api_base=settings.vllm_base_url,
-        is_chat_model=True,
     )
     LlamaSettings.embed_model = _create_embed_model()
     LlamaSettings.node_parser = SentenceSplitter(chunk_size=512, chunk_overlap=64)

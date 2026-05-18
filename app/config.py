@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     vllm_base_url: str = "http://127.0.0.1:8000/v1"
     vllm_api_key: str = "vllm_api_key_12345"
     vllm_model: str = "Qwen3.6-35B-A3B"
+    vllm_context_window: int = 32768
 
     chroma_path: str = "./chroma_db"
     chroma_collection: str = "kb_documents"
