@@ -1,6 +1,6 @@
 # 知识库智能体 (KB Agent)
 
-基于 **FastAPI + LlamaIndex + Chroma** 的本地 RAG 知识库问答服务。支持上传 `txt` / `md` / `pdf` 文档，通过本地 vLLM（OpenAI 兼容接口）进行问答，并在回答中附带引用来源。
+基于 **FastAPI + LlamaIndex + Chroma** 的本地 RAG 知识库问答服务。支持上传 `txt` / `md` / `pdf` / `docx` / `xlsx` / `xls` / `csv` / `pptx`，或直接粘贴文字入库；通过本地 vLLM（OpenAI 兼容接口）进行问答，并在回答中附带引用来源。
 
 > **新手必读**：[docs/新手操作与部署手册.md](docs/新手操作与部署手册.md) — 从零部署、网页使用、数据位置、故障排查（图文并茂步骤说明）。
 
@@ -72,7 +72,15 @@ API 文档：`http://127.0.0.1:8080/docs`
 
 ### `POST /upload` — 上传文档
 
-支持格式：`.txt`、`.md`、`.pdf`
+支持格式：`.txt`、`.md`、`.pdf`、`.docx`、`.xlsx`、`.xls`、`.csv`、`.pptx`
+
+### `POST /ingest/text` — 文字直接入库
+
+```bash
+curl -X POST "http://127.0.0.1:8080/ingest/text" \
+  -H "Content-Type: application/json" \
+  -d '{"content": "这是要加入知识库的一段说明文字。", "title": "产品摘要"}'
+```
 
 ```bash
 curl -X POST "http://127.0.0.1:8080/upload" \
@@ -101,7 +109,7 @@ curl -X POST "http://127.0.0.1:8080/chat" \
 
 ```json
 {
-  "answer": "根据文档内容，主要要点包括……\n\n引用来源：\n[1] document.pdf (相关度: 0.812)\n    ……原文片段……",
+  "answer": "根据文档内容，主要要点包括……",
   "citations": [
     {
       "index": 1,
@@ -113,7 +121,7 @@ curl -X POST "http://127.0.0.1:8080/chat" \
 }
 ```
 
-`answer` 字段末尾会列出引用来源；`citations` 数组提供结构化引用，便于前端展示。
+`answer` 为纯正文；引用在 `citations` 中（网页端展示文件名与摘录，`score` 供调试）。
 
 ### `GET /health` — 健康检查
 

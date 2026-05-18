@@ -17,6 +17,15 @@ class ChatResponse(BaseModel):
     citations: list[Citation]
 
 
+class TextIngestRequest(BaseModel):
+    content: str = Field(..., min_length=1, description="要写入知识库的文本")
+    title: str | None = Field(
+        default=None,
+        max_length=200,
+        description="可选标题，用于在引用来源中显示",
+    )
+
+
 class UploadResponse(BaseModel):
     filename: str
     message: str

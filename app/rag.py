@@ -6,7 +6,7 @@ from pathlib import Path
 
 import chromadb
 from llama_index.core import Settings as LlamaSettings
-from llama_index.core import SimpleDirectoryReader, StorageContext, VectorStoreIndex
+from llama_index.core import StorageContext, VectorStoreIndex
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core.base.llms.types import MessageRole
 from llama_index.core.llms import LLMMetadata
@@ -16,9 +16,12 @@ from llama_index.llms.openai import OpenAI
 from llama_index.vector_stores.chroma import ChromaVectorStore
 
 from app.config import settings
+from app.documents import (
+    ALLOWED_EXTENSIONS,
+    load_documents_from_file,
+    load_documents_from_text,
+)
 from app.models import ChatResponse, Citation
-
-ALLOWED_EXTENSIONS = {".txt", ".md", ".pdf"}
 
 logger = logging.getLogger(__name__)
 _index: VectorStoreIndex | None = None
@@ -108,8 +111,16 @@ def _source_name(metadata: dict) -> str:
     for key in ("file_name", "filename", "source", "file_path"):
         value = metadata.get(key)
         if value:
-            return Path(str(value)).name
+            return _display_filename(Path(str(value)).name)
     return "unknown"
+
+
+def _display_filename(name: str) -> str:
+    """Strip upload prefix '{uuid}_' so citations show the original filename."""
+    stem, sep, rest = name.partition("_")
+    if sep and len(stem) == 32 and all(c in "0123456789abcdef" for c in stem.lower()):
+        return rest or name
+    return name
 
 
 def _excerpt(text: str, max_len: int = 280) -> str:
@@ -119,20 +130,24 @@ def _excerpt(text: str, max_len: int = 280) -> str:
     return cleaned[: max_len - 3] + "..."
 
 
-def ingest_file(file_path: Path) -> int:
-    if file_path.suffix.lower() not in ALLOWED_EXTENSIONS:
-        raise ValueError(f"Unsupported file type: {file_path.suffix}")
-
-    reader = SimpleDirectoryReader(input_files=[str(file_path)])
-    documents = reader.load_data()
-    for doc in documents:
-        doc.metadata["file_name"] = file_path.name
-        doc.metadata["file_path"] = str(file_path)
-
+def _insert_documents(documents: list) -> int:
     index = get_index()
     for doc in documents:
         index.insert(doc)
     return len(documents)
+
+
+def ingest_file(file_path: Path) -> int:
+    documents = load_documents_from_file(file_path)
+    return _insert_documents(documents)
+
+
+def ingest_text(content: str, title: str | None = None) -> int:
+    documents = load_documents_from_text(content, title=title)
+    dest = settings.upload_path / documents[0].metadata["file_name"]
+    dest.write_text(content.strip(), encoding="utf-8")
+    documents[0].metadata["file_path"] = str(dest)
+    return _insert_documents(documents)
 
 
 def _build_citations(source_nodes: list[NodeWithScore]) -> list[Citation]:
@@ -158,18 +173,6 @@ def _build_citations(source_nodes: list[NodeWithScore]) -> list[Citation]:
     return citations
 
 
-def _format_answer_with_citations(answer: str, citations: list[Citation]) -> str:
-    if not citations:
-        return answer
-
-    lines = [answer.rstrip(), "", "引用来源："]
-    for c in citations:
-        score_part = f" (相关度: {c.score:.3f})" if c.score is not None else ""
-        lines.append(f"[{c.index}] {c.source}{score_part}")
-        lines.append(f"    {c.excerpt}")
-    return "\n".join(lines)
-
-
 def chat(message: str) -> ChatResponse:
     index = get_index()
     query_engine = index.as_query_engine(similarity_top_k=settings.similarity_top_k)
@@ -178,6 +181,5 @@ def chat(message: str) -> ChatResponse:
     source_nodes = list(response.source_nodes or [])
     citations = _build_citations(source_nodes)
     answer_text = str(response).strip()
-    formatted_answer = _format_answer_with_citations(answer_text, citations)
 
-    return ChatResponse(answer=formatted_answer, citations=citations)
+    return ChatResponse(answer=answer_text, citations=citations)
