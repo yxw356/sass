@@ -2,7 +2,10 @@
 
 基于 **FastAPI + LlamaIndex + Chroma** 的本地 RAG 知识库问答服务。支持上传 `txt` / `md` / `pdf` / `docx` / `xlsx` / `xls` / `csv` / `pptx`，或直接粘贴文字入库；通过本地 vLLM（OpenAI 兼容接口）进行问答，并在回答中附带引用来源。
 
-> **新手必读**：[docs/新手操作与部署手册.md](docs/新手操作与部署手册.md) — 从零部署、网页使用、数据位置、故障排查（图文并茂步骤说明）。
+> **文档**  
+> - [新手操作与部署手册](docs/新手操作与部署手册.md) — 部署与使用  
+> - [产品需求文档](docs/需求文档.md) — 功能范围、架构与验收标准  
+> - [更新记录 CHANGELOG](CHANGELOG.md) — 各版本变更明细
 
 ## 架构
 
@@ -139,7 +142,9 @@ kb-agent/
 │   ├── rag.py         # LlamaIndex RAG 逻辑
 │   └── main.py        # FastAPI 入口 + 网页界面
 ├── docs/
+│   ├── 需求文档.md
 │   └── 新手操作与部署手册.md
+├── CHANGELOG.md           # 版本更新记录
 ├── data/uploads/      # 上传文件存储
 ├── chroma_db/         # Chroma 向量库（运行后自动生成）
 ├── static/            # Swagger 本地静态资源
